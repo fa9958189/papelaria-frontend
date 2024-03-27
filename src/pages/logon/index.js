@@ -1,68 +1,92 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import '../../pages/global.css';
+import Menu from '../../componente/Menu';
+import { FiEdit, FiTrash } from "react-icons/fi";
+import { Link } from 'react-router-dom';
+import Head from '../../componente/Head';
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 import api from '../../server/api';
-import Logo from "../../assets/img/Logo.png";
-import "./styles.css";
 
-function Login() {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState("");
-    const [senha, setSenha] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+export default function ListaDizimista() {
+  const [dizimistas, setDizimistas] = useState([]);
 
+  useEffect(() => {
+    mostrarDizimistas();
+  }, []);
 
+  const mostrarDizimistas = () => {
+    api.get('/dizimista')
+      .then(response => {
+        console.log(response.data);
+        setDizimistas(response.data);
+      })
+      .catch(error => {
+        console.error("Erro ao obter lista de dizimistas:", error);
+      });
+  };
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setErrorMessage("");
-
-        try {
-            const resposta = await api.post("/usuario/login", { email, senha });
-            if (resposta.status >= 200 && resposta.status < 300) {
-                alert(resposta.data.mensagem); // Use um método de feedback mais amigável
-                navigate('/dashboard');
-            }
-        } catch (error) {
-            if (error.response) {
-                setErrorMessage(error.response.data.error || "Erro desconhecido");
-            } else {
-                setErrorMessage("Erro ao fazer login. Por favor, tente novamente.");
-            }
-        } finally {
-            setIsLoading(false);
+  const excluirDizimista = (id) => {
+    confirmAlert({
+      title: 'Confirmação',
+      message: 'Tem certeza que deseja excluir este dizimista?',
+      buttons: [
+        {
+          label: 'Sim',
+          onClick: () => {
+            api.delete(`/dizimista/${id}`)
+              .then(response => {
+                console.log(response.data);
+                alert(response.data.mensagem);
+                mostrarDizimistas();
+              })
+              .catch(error => {
+                console.error("Erro ao excluir dizimista:", error);
+              });
+          }
+        },
+        {
+          label: 'Não'
         }
-    };
+      ]
+    });
+  };
 
-    return (
-        <div className="logon-container">
-            <div className='logo-container'>
-                <img src={Logo} alt="Logo" className="logo-image" />
-            </div>
-            <section className="form">
-             <div className='preto'>
-             <h1>Faça seu login</h1>
-             </div>  
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
-                <form onSubmit={handleLogin}>
-                    <input
-                        placeholder="Email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                    <input
-                        placeholder="Senha"
-                        type="password"
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                    />
-                    <button type="submit" disabled={isLoading}>Entrar</button>
-                </form>
-            </section>
+  return (
+    <div className="dashboard-container">
+      <div className='menu'>
+        <Menu />
+      </div>
+      <div className='principal'>
+        <Head title="Lista de Dizimistas" />
+        <div className='form'>
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Descrição</th>
+                <th>Estoque Mínimo</th>
+                <th>Estoque Máximo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dizimistas.map(dizimista => (
+                <tr key={dizimista.id}>
+                  <td>{dizimista.status}</td>
+                  <td>{dizimista.descricao}</td>
+                  <td>{dizimista.estoque_minimo}</td>
+                  <td>{dizimista.estoque_maximo}</td>
+                  <td>
+                    <Link to={`/editardizimista/${dizimista.id}`}><FiEdit /></Link>
+                    <button onClick={() => excluirDizimista(dizimista.id)}><FiTrash /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
-
-export default Login;
